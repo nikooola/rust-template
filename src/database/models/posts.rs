@@ -1,6 +1,5 @@
 use diesel::prelude::*;
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 #[derive(Queryable, Selectable)]
 #[diesel(table_name = crate::database::models::schema::posts)]
