@@ -1,6 +1,6 @@
 use diesel::RunQueryDsl;
 use rocket::serde::json::Json;
-use rocket::{get, launch, routes, Build, Rocket};
+use rocket::{catch, catchers, get, launch, routes, Build, Rocket};
 
 use diesel::prelude::*;
 use rust_api::controllers::k8s::{healthcheck, liveliness};
@@ -23,10 +23,16 @@ async fn example(pool: &rocket::State<PgPool>) -> Json<Vec<Post>> {
     Json(result)
 }
 
+#[catch(404)]
+fn not_found() -> String {
+    "404 nothing found".to_string()
+}
+
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
         .attach(DbFaring)
+        .register("/", catchers![not_found])
         .mount("/k8s", routes![healthcheck, liveliness])
         .mount("/", routes![example])
 }
