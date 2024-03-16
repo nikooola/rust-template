@@ -27,6 +27,7 @@ pub async fn get_connection_pool() -> Result<PgPool, Box<dyn std::error::Error>>
 
     let pool = Pool::builder()
         .test_on_check_out(true)
+        .connection_timeout(std::time::Duration::from_secs(3))
         .build(manager)?;
 
     Ok(pool)

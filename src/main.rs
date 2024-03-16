@@ -1,10 +1,12 @@
-use diesel::{Queryable, RunQueryDsl};
+use diesel::{RunQueryDsl};
 use rocket::{Build, get, launch, Rocket, routes};
+use rocket::serde::{json::Json};
+
 use diesel::prelude::*;
-use rust_api::infrastructure::database::db::{DbFaring, PgPool};
-use rust_api::infrastructure::models::posts::Post;
-use rust_api::infrastructure::models::schema::posts::dsl::posts;
-use rocket::serde::{Deserialize, json::Json};
+use rust_api::database::db::{DbFaring, PgPool};
+use rust_api::database::models::posts::Post;
+use rust_api::database::models::schema::posts::dsl::posts;
+use rust_api::controllers::k8s::k8s::{healthcheck, liveliness};
 
 
 // Example route handler using the database connection
@@ -28,7 +30,9 @@ async fn example(pool: &rocket::State<PgPool>) -> Json<Vec<Post>>{
 fn rocket() -> Rocket<Build>{
     rocket::build()
         .attach(DbFaring)
-        .mount("/", routes![example]) // Define your routes here
+        .mount("/k8s", routes![healthcheck, liveliness])
+        .mount("/", routes![example])
+
 }
 
 
