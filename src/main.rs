@@ -3,6 +3,7 @@ use rocket::serde::json::Json;
 use rocket::{catch, catchers, get, launch, routes, Build, Rocket};
 
 use diesel::prelude::*;
+use dotenv::dotenv;
 use rust_api::controllers::k8s::{healthcheck, liveliness};
 use rust_api::database::db::{DbFaring, PgPool};
 use rust_api::database::models::posts::Post;
@@ -28,11 +29,18 @@ fn not_found() -> String {
     "404 nothing found".to_string()
 }
 
+#[catch(500)]
+fn internal_service_error() -> String {
+    "Internal service error, please try later.".to_string()
+}
+
 #[launch]
 fn rocket() -> Rocket<Build> {
+    // read from env file
+    dotenv().ok();
     rocket::build()
         .attach(DbFaring)
-        .register("/", catchers![not_found])
+        .register("/", catchers![not_found, internal_service_error])
         .mount("/k8s", routes![healthcheck, liveliness])
         .mount("/", routes![example])
 }

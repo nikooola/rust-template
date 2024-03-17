@@ -13,7 +13,7 @@ impl Fairing for DbFaring {
     fn info(&self) -> Info {
         Info {
             name: "Database Connection Fairing",
-            kind: Kind::Ignite | Kind::Liftoff,
+            kind: Kind::Ignite,
         }
     }
 
