@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use rocket::fairing::Fairing;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{Data, Request, Response};
-use tracing::info;
+use tracing::{info, Level, span};
 use uuid::Uuid;
 
 pub struct RequestID(pub String);
@@ -34,15 +34,48 @@ impl Fairing for RequestLogger {
 
     async fn on_request(&self, req: &mut Request<'_>, _data: &mut Data<'_>) {
         let now = Utc::now();
-        info!(name: "Request started",
-            start_time = now.timestamp(),
+
+        let request_id = match req.guard::<RequestID>().await {
+            Outcome::Success(request_id) => request_id,
+            _ => {
+                // Handle error if request ID cannot be obtained
+                info!("Failed to obtain request ID");
+                return;
+            }
+        };
+
+        // Start a tracing span with the request ID
+        let span = span!(
+            Level::INFO,
+            "Request started",
+            request_id = &request_id.0,
             path = &req.uri().to_string(),
-            method = &req.method().to_string(),
+            method = &req.method().to_string()
         );
+
+        // Instrument future operations with tracing
+        let _enter = span.enter();
+
+        // Log request start info
+        info!(
+            "Request started: {} {}",
+            req.method(),
+            req.uri(),
+        );
+
         req.local_cache(|| TimerStart(Some(now)));
     }
 
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
+        let request_id = match req.guard::<RequestID>().await {
+            Outcome::Success(request_id) => request_id,
+            _ => {
+                // Handle error if request ID cannot be obtained
+                info!("Failed to obtain request ID");
+                return;
+            }
+        };
+
         let end_time = Utc::now();
         let start_time = req.local_cache(|| TimerStart(None));
 
@@ -54,10 +87,31 @@ impl Fairing for RequestLogger {
                 Default::default() // Or handle the case when start_time is None
             }
         };
-        info!(name: "Request finished",
-            status = res.status().to_string(),
-            end_time = end_time.timestamp(),
-            duration = duration.num_milliseconds()
+
+            // Start a tracing span with the request ID for response
+        let span = span!(
+            Level::INFO,
+            "Request finished",
+            request_id = &request_id.0,
+            status = &res.status().code,
+            content_type = res
+                .content_type()
+                .map(|ct| ct.to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        );
+
+        // Instrument future operations with tracing
+        let _enter = span.enter();
+
+
+        // Log request start info
+        info!(
+            "Request Finished: {} {} in {}ms",
+            req.method(),
+            req.uri(),
+            duration.num_milliseconds(),
         );
     }
+
+
 }
