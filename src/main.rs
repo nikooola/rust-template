@@ -8,6 +8,7 @@ use rust_api::controllers::k8s::{healthcheck, liveliness};
 use rust_api::database::db::{DbFaring, PgPool};
 use rust_api::database::models::posts::Post;
 use rust_api::database::models::schema::posts::dsl::posts;
+use rust_api::middleware::RequestLogger;
 
 // Example route handler using the database connection
 #[get("/example")]
@@ -38,8 +39,10 @@ fn internal_service_error() -> String {
 fn rocket() -> Rocket<Build> {
     // read from env file
     dotenv().ok();
+    tracing_subscriber::fmt::init();
     rocket::build()
         .attach(DbFaring)
+        .attach(RequestLogger)
         .register("/", catchers![not_found, internal_service_error])
         .mount("/k8s", routes![healthcheck, liveliness])
         .mount("/", routes![example])

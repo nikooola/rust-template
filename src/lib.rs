@@ -8,3 +8,5 @@ pub mod database {
 pub mod controllers {
     pub mod k8s;
 }
+
+pub mod middleware;
